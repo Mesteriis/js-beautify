@@ -43,7 +43,6 @@ class TestJSBeautifier(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
         cls.wrapregex = re.compile('^(.+)$', re.MULTILINE)
 
     def reset_options(self):
@@ -9528,7 +9527,7 @@ class TestJSBeautifier(unittest.TestCase):
 
         # if the expected is different from input, run it again
         # expected output should be unchanged when run twice.
-        if not expectation is None:
+        if expectation is not None:
             self.assertMultiLineEqual(
                 jsbeautifier.beautify(expectation, self.options), expectation)
 

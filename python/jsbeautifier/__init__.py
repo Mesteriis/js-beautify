@@ -222,9 +222,7 @@ def mkdir_p(path):
         if path:
             os.makedirs(path)
     except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
+        if exc.errno != errno.EEXIST or not os.path.isdir(path):
             raise Exception()
 
 
@@ -285,9 +283,7 @@ def main():
 
     js_options = default_options()
 
-    filepath_params = []
-    filepath_params.extend(args)
-
+    filepath_params = list(args)
     outfile_param = "stdout"
     replace = False
 
@@ -399,11 +395,7 @@ def main():
         filepaths = set(filepaths)
 
         for filepath in filepaths:
-            if not replace:
-                outfile = outfile_param
-            else:
-                outfile = filepath
-
+            outfile = outfile_param if not replace else filepath
             # Editorconfig used only on files, not stdin
             if getattr(js_options, "editorconfig"):
                 editorconfig_filepath = filepath

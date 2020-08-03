@@ -131,9 +131,8 @@ class Unbaser(object):
         self.base = base
 
         # fill elements 37...61, if necessary
-        if 36 < base < 62:
-            if not hasattr(self.ALPHABET, self.ALPHABET[62][:base]):
-                self.ALPHABET[base] = self.ALPHABET[62][:base]
+        if 36 < base < 62 and not hasattr(self.ALPHABET, self.ALPHABET[62][:base]):
+            self.ALPHABET[base] = self.ALPHABET[62][:base]
         # attrs = self.ALPHABET
         # print ', '.join("%s: %s" % item for item in attrs.items())
         # If base can be handled by int() builtin, let it do it for us
@@ -142,9 +141,11 @@ class Unbaser(object):
         else:
             # Build conversion dictionary cache
             try:
-                self.dictionary = dict(
-                    (cipher, index) for index, cipher in enumerate(self.ALPHABET[base])
-                )
+                self.dictionary = {
+                    cipher: index
+                    for index, cipher in enumerate(self.ALPHABET[base])
+                }
+
             except KeyError:
                 raise TypeError("Unsupported base encoding.")
 
@@ -155,7 +156,7 @@ class Unbaser(object):
 
     def _dictunbaser(self, string):
         """Decodes a  value to an integer."""
-        ret = 0
-        for index, cipher in enumerate(string[::-1]):
-            ret += (self.base ** index) * self.dictionary[cipher]
-        return ret
+        return sum(
+            (self.base ** index) * self.dictionary[cipher]
+            for index, cipher in enumerate(string[::-1])
+        )
