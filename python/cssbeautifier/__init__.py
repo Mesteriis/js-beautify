@@ -193,7 +193,7 @@ def main():
         file = "-"
 
     try:
-        if outfile == "stdout" and replace and not file == "-":
+        if outfile == "stdout" and replace and file != "-":
             outfile = file
 
         pretty = beautify_file(file, css_options)

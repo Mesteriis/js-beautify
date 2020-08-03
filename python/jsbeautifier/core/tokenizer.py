@@ -126,13 +126,12 @@ class Tokenizer:
         return False
 
     def _create_token(self, token_type, text):
-        token = Token(
+        return Token(
             token_type,
             text,
             self._patterns.whitespace.newline_count,
             self._patterns.whitespace.whitespace_before_token,
         )
-        return token
 
     def _readWhitespace(self):
         return self._patterns.whitespace.read()

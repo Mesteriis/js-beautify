@@ -190,9 +190,7 @@ class Beautifier:
             self._last_last_text = self._flags.last_token.text
             self._flags.last_token = current_token
 
-        sweet_code = self._output.get_code(self._options.eol)
-
-        return sweet_code
+        return self._output.get_code(self._options.eol)
 
     def handle_token(self, current_token, preserve_statement_flags=False):
         if current_token.type == TOKEN.START_EXPR:
@@ -262,7 +260,7 @@ class Beautifier:
 
             if self._options.preserve_newlines and newlines > 1:
                 self.print_newline(False, preserve_statement_flags)
-                for i in range(1, newlines):
+                for _ in range(1, newlines):
                     self.print_newline(True, preserve_statement_flags)
 
     def unpack(self, source, evalcode=False):
@@ -277,11 +275,7 @@ class Beautifier:
         return mode == MODE.ArrayLiteral
 
     def is_expression(self, mode):
-        return (
-            mode == MODE.Expression
-            or mode == MODE.ForInitializer
-            or mode == MODE.Conditional
-        )
+        return mode in [MODE.Expression, MODE.ForInitializer, MODE.Conditional]
 
     _newline_restricted_tokens = frozenset(
         ["async", "break", "continue", "return", "throw", "yield"]
@@ -318,24 +312,23 @@ class Beautifier:
             self._output.set_wrap_point()
 
     def print_newline(self, force_newline=False, preserve_statement_flags=False):
-        if not preserve_statement_flags:
-            if (
-                self._flags.last_token.text != ";"
-                and self._flags.last_token.text != ","
-                and self._flags.last_token.text != "="
-                and (
-                    self._flags.last_token.type != TOKEN.OPERATOR
-                    or self._flags.last_token.text == "--"
-                    or self._flags.last_token.text == "++"
-                )
+        if not preserve_statement_flags and (
+            self._flags.last_token.text != ";"
+            and self._flags.last_token.text != ","
+            and self._flags.last_token.text != "="
+            and (
+                self._flags.last_token.type != TOKEN.OPERATOR
+                or self._flags.last_token.text == "--"
+                or self._flags.last_token.text == "++"
+            )
+        ):
+            next_token = self._tokens.peek()
+            while (
+                self._flags.mode == MODE.Statement
+                and not (self._flags.if_block and reserved_word(next_token, "else"))
+                and not self._flags.do_block
             ):
-                next_token = self._tokens.peek()
-                while (
-                    self._flags.mode == MODE.Statement
-                    and not (self._flags.if_block and reserved_word(next_token, "else"))
-                    and not self._flags.do_block
-                ):
-                    self.restore_mode()
+                self.restore_mode()
 
         if self._output.add_new_line(force_newline):
             self._flags.multiline_frame = True
@@ -366,21 +359,20 @@ class Beautifier:
             and current_token.previous
             and current_token.previous.type == TOKEN.COMMA
             and self._output.just_added_newline()
-        ):
-            if self._output.previous_line.last() == ",":
-                # if the comma was already at the start of the line,
-                # pull back onto that line and reprint the indentation
-                popped = self._output.previous_line.pop()
-                if self._output.previous_line.is_empty():
-                    self._output.previous_line.push(popped)
-                    self._output.trim(True)
-                    self._output.current_line.pop()
-                    self._output.trim()
+        ) and self._output.previous_line.last() == ",":
+            # if the comma was already at the start of the line,
+            # pull back onto that line and reprint the indentation
+            popped = self._output.previous_line.pop()
+            if self._output.previous_line.is_empty():
+                self._output.previous_line.push(popped)
+                self._output.trim(True)
+                self._output.current_line.pop()
+                self._output.trim()
 
-                # add the comma in front of the next token
-                self.print_token_line_indentation(current_token)
-                self._output.add_token(",")
-                self._output.space_before_token = True
+            # add the comma in front of the next token
+            self.print_token_line_indentation(current_token)
+            self._output.add_token(",")
+            self._output.space_before_token = True
 
         if s is None:
             s = current_token.text
@@ -460,22 +452,24 @@ class Beautifier:
                 and current_token.comments_before is None
             )
         )
-        start = start or (
-            self._flags.last_token.type == TOKEN.END_EXPR
-            and (
-                self._previous_flags.mode == MODE.ForInitializer
-                or self._previous_flags.mode == MODE.Conditional
-            )
+        start = (
+            start
+            or self._flags.last_token.type == TOKEN.END_EXPR
+            and self._previous_flags.mode
+            in [MODE.ForInitializer, MODE.Conditional]
         )
-        start = start or (
-            self._flags.last_token.type == TOKEN.WORD
+
+        start = (
+            start
+            or self._flags.last_token.type == TOKEN.WORD
             and self._flags.mode == MODE.BlockStatement
             and not self._flags.in_case
-            and not (current_token.text == "--" or current_token.text == "++")
+            and not current_token.text in ["--", "++"]
             and self._last_last_text != "function"
             and current_token.type != TOKEN.WORD
             and current_token.type != TOKEN.RESERVED
         )
+
         start = start or (
             self._flags.mode == MODE.ObjectLiteral
             and (
@@ -759,12 +753,6 @@ class Beautifier:
             and next_token.comments_before is None
             and next_token.text == "}"
         )
-        empty_anonymous_function = (
-            empty_braces
-            and self._flags.last_word == "function"
-            and self._flags.last_token.type == TOKEN.END_EXPR
-        )
-
         if (
             self._options.brace_preserve_inline
         ):  # check for inline, set inline_frame if so
@@ -788,6 +776,12 @@ class Beautifier:
             self._options.brace_style == "expand"
             or (self._options.brace_style == "none" and current_token.newlines)
         ) and not self._flags.inline_frame:
+            empty_anonymous_function = (
+                empty_braces
+                and self._flags.last_word == "function"
+                and self._flags.last_token.type == TOKEN.END_EXPR
+            )
+
             if self._flags.last_token.type != TOKEN.OPERATOR and (
                 empty_anonymous_function
                 or self._flags.last_token.type == TOKEN.EQUALS
@@ -800,10 +794,9 @@ class Beautifier:
             else:
                 self.print_newline(preserve_statement_flags=True)
         else:  # collapse || inline_frame
-            if self.is_array(self._previous_flags.mode) and (
-                self._flags.last_token.type == TOKEN.START_EXPR
-                or self._flags.last_token.type == TOKEN.COMMA
-            ):
+            if self.is_array(
+                self._previous_flags.mode
+            ) and self._flags.last_token.type in [TOKEN.START_EXPR, TOKEN.COMMA]:
                 # if we're preserving inline,
                 # allow newline between comma and next brace.
                 if self._flags.inline_frame:

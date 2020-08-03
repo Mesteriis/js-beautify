@@ -73,7 +73,7 @@ class TemplatablePattern(Pattern):
     def read_options(self, options):
         result = self._create()
         for language in ["django", "erb", "handlebars", "php"]:
-            setattr(result._disabled, language, not (language in options.templating))
+            setattr(result._disabled, language, language not in options.templating)
         result._update()
         return result
 
@@ -113,7 +113,7 @@ class TemplatablePattern(Pattern):
         return result
 
     def __set_templated_pattern(self):
-        items = list()
+        items = []
 
         if not self._disabled.php:
             items.append(self.__patterns.php._starting_pattern.pattern)

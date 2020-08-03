@@ -166,11 +166,7 @@ class Options:
         if len(result) == 0 or len(selection_list) == 0:
             return False
 
-        for item in result:
-            if item not in selection_list:
-                return False
-
-        return True
+        return all(item in selection_list for item in result)
 
 
 # merges child options up with the parent options object

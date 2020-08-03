@@ -142,10 +142,13 @@ class Beautifier:
 
         while whitespaceChar.search(self._input.peek() or "") is not None:
             self._ch = self._input.next()
-            if allowAtLeastOneNewLine and self._ch == "\n":
-                if self._options.preserve_newlines or isFirstNewLine:
-                    isFirstNewLine = False
-                    self._output.add_new_line(True)
+            if (
+                allowAtLeastOneNewLine
+                and self._ch == "\n"
+                and (self._options.preserve_newlines or isFirstNewLine)
+            ):
+                isFirstNewLine = False
+                self._output.add_new_line(True)
         return result
 
     # Nested pseudo-class if we are insideRule
@@ -165,7 +168,7 @@ class Beautifier:
                 if openParen == 0:
                     return False
                 openParen -= 1
-            elif ch == ";" or ch == "}":
+            elif ch in [";", "}"]:
                 return False
             i += 1
             ch = self._input.peek(i)
@@ -322,13 +325,16 @@ class Beautifier:
                     # otherwise, declarations are also allowed
                     insideRule = self._indentLevel >= self._nestedLevel - 1
 
-                if self._options.newline_between_rules and insideRule:
-                    if (
+                if (
+                    self._options.newline_between_rules
+                    and insideRule
+                    and (
                         self._output.previous_line
                         and not self._output.previous_line.is_empty()
                         and self._output.previous_line.item(-1) != "{"
-                    ):
-                        self._output.ensure_empty_line_above("/", ",")
+                    )
+                ):
+                    self._output.ensure_empty_line_above("/", ",")
 
                 self._output.space_before_token = True
 
@@ -366,13 +372,13 @@ class Beautifier:
                 if (
                     self._options.newline_between_rules
                     and not self._output.just_added_blankline()
-                ):
-                    if self._input.peek() != "}":
-                        self._output.add_new_line(True)
+                ) and self._input.peek() != "}":
+                    self._output.add_new_line(True)
             elif self._ch == ":":
                 if (
-                    (insideRule or enteringConditionalGroup)
-                    and not (self._input.lookBack("&") or self.foundNestedPseudoClass())
+                    ((insideRule or enteringConditionalGroup))
+                    and not self._input.lookBack("&")
+                    and not self.foundNestedPseudoClass()
                     and not self._input.lookBack("(")
                     and not insideAtExtend
                     and parenLevel == 0
@@ -401,7 +407,7 @@ class Beautifier:
                     else:
                         # pseudo-element
                         self.print_string(":")
-            elif self._ch == '"' or self._ch == "'":
+            elif self._ch in ['"', "'"]:
                 self.preserveSingleSpace(isAfterSpace)
                 self.print_string(self._ch + self.eatString(self._ch))
                 self.eatWhitespace(True)
@@ -426,11 +432,11 @@ class Beautifier:
                     self.eatWhitespace(True)
                     self._output.space_before_token = True
             elif self._ch == "(":
+                parenLevel += 1
                 # may be a url
                 if self._input.lookBack("url"):
                     self.print_string(self._ch)
                     self.eatWhitespace()
-                    parenLevel += 1
                     self.indent()
                     self._ch = self._input.next()
                     if self._ch in {")", '"', "'"}:
@@ -444,7 +450,6 @@ class Beautifier:
                     self.preserveSingleSpace(isAfterSpace)
                     self.print_string(self._ch)
                     self.eatWhitespace()
-                    parenLevel += 1
                     self.indent()
             elif self._ch == ")":
                 if parenLevel:
@@ -464,7 +469,7 @@ class Beautifier:
                 else:
                     self._output.space_before_token = True
             elif (
-                (self._ch == ">" or self._ch == "+" or self._ch == "~")
+                self._ch in [">", "+", "~"]
                 and not insidePropertyValue
                 and parenLevel == 0
             ):
@@ -498,6 +503,4 @@ class Beautifier:
                 self.preserveSingleSpace(isAfterSpace)
                 self.print_string(self._ch)
 
-        sweet_code = self._output.get_code(self._options.eol)
-
-        return sweet_code
+        return self._output.get_code(self._options.eol)

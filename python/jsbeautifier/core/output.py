@@ -81,27 +81,26 @@ class OutputLine:
         )
 
     def _allow_wrap(self):
-        if self._should_wrap():
-            self.__parent.add_new_line()
-            next = self.__parent.current_line
-            next.set_indent(
-                self.__wrap_point_indent_count, self.__wrap_point_alignment_count
-            )
-            next.__items = self.__items[self.__wrap_point_index :]
-            self.__items = self.__items[: self.__wrap_point_index]
+        if not self._should_wrap():
+            return False
+        self.__parent.add_new_line()
+        next = self.__parent.current_line
+        next.set_indent(
+            self.__wrap_point_indent_count, self.__wrap_point_alignment_count
+        )
+        next.__items = self.__items[self.__wrap_point_index :]
+        self.__items = self.__items[: self.__wrap_point_index]
 
-            next.__character_count += (
-                self.__character_count - self.__wrap_point_character_count
-            )
-            self.__character_count = self.__wrap_point_character_count
+        next.__character_count += (
+            self.__character_count - self.__wrap_point_character_count
+        )
+        self.__character_count = self.__wrap_point_character_count
 
-            if next.__items[0] == " ":
-                next.__items.pop(0)
-                next.__character_count -= 1
+        if next.__items[0] == " ":
+            next.__items.pop(0)
+            next.__character_count -= 1
 
-            return True
-
-        return False
+        return True
 
     def last(self):
         if not self.is_empty():
@@ -266,7 +265,7 @@ class Output:
 
         sweet_code = "\n".join(line.toString() for line in self.__lines)
 
-        if not eol == "\n":
+        if eol != "\n":
             sweet_code = sweet_code.replace("\n", eol)
 
         return sweet_code
@@ -324,10 +323,7 @@ class Output:
             self.current_line = self.__lines[-1]
             self.current_line.trim()
 
-        if len(self.__lines) > 1:
-            self.previous_line = self.__lines[-2]
-        else:
-            self.previous_line = None
+        self.previous_line = self.__lines[-2] if len(self.__lines) > 1 else None
 
     def just_added_newline(self):
         return self.current_line.is_empty()

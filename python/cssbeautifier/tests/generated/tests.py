@@ -11081,7 +11081,7 @@ class CSSBeautifierTest(unittest.TestCase):
         t("@myvar:10px; .tabs{width:10px;}", "@myvar: 10px;\n.tabs {\n    width: 10px;\n}")
 
     def decodesto(self, input, expectation=None):
-        if expectation == None:
+        if expectation is None:
             expectation = input
 
         self.assertMultiLineEqual(
@@ -11089,7 +11089,7 @@ class CSSBeautifierTest(unittest.TestCase):
 
         # if the expected is different from input, run it again
         # expected output should be unchanged when run twice.
-        if not expectation != input:
+        if expectation == input:
             self.assertMultiLineEqual(
                 cssbeautifier.beautify(expectation, self.options), expectation)
 
